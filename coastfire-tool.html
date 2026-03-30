@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retirement Planner</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#080b10;--s1:#0e1318;--s2:#141a22;--s3:#1a2230;
+  --border:#1e2a38;--border2:#253040;
+  --text:#dde5ef;--muted:#8fa3b8;
+  --green:#3ecf8e;--blue:#4db8f0;--red:#f05c5c;
+  --gold:#f0b429;--orange:#f07840;
+  --gd:#3ecf8e18;--bd:#4db8f018;--rd:#f05c5c18;--od:#f0b42918;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* TOPBAR */
+.topbar{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--s1);flex-shrink:0;}
+.topbar h1{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.5px;}
+.tagline{color:var(--muted);font-size:10px;}
+.chips{margin-left:auto;display:flex;gap:7px;flex-wrap:wrap;}
+.chip{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:4px;font-size:10px;font-weight:500;border:1px solid;}
+.chip.achieved{background:var(--gd);border-color:#3ecf8e40;color:var(--green);}
+.chip.near{background:var(--od);border-color:#f0b42940;color:var(--gold);}
+.chip.no{background:var(--rd);border-color:#f05c5c40;color:var(--red);}
+.chip-dot{width:5px;height:5px;border-radius:50%;background:currentColor;animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.export-btn{background:var(--s2);border:1px solid var(--border2);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 11px;border-radius:4px;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.export-btn:hover{color:var(--text);border-color:var(--blue);}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:285px 1fr;flex:1;overflow:hidden;}
+.sidebar{background:var(--s1);border-right:1px solid var(--border);overflow-y:auto;padding-bottom:60px;}
+.main{overflow-y:auto;padding:14px 20px 40px;display:flex;flex-direction:column;gap:12px;}
+
+/* SIDEBAR SECTIONS */
+.sb-section{border-bottom:1px solid var(--border);}
+.sb-hdr{padding:10px 14px;font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;}
+.sb-hdr:hover{color:var(--text);}
+.sb-hdr .arr{transition:transform .18s;}
+.sb-hdr.open .arr{transform:rotate(90deg);}
+.sb-body{padding:5px 13px 13px;display:none;}
+.sb-body.open{display:block;}
+.field{margin-bottom:9px;}
+.field label{display:block;font-size:9px;color:var(--muted);margin-bottom:4px;}
+.field input{width:100%;background:var(--s2);border:1px solid var(--border2);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 8px;border-radius:4px;outline:none;transition:border-color .15s;}
+.field input:focus{border-color:var(--blue);}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;}
+.sb-note{font-size:9px;color:var(--muted);line-height:1.7;margin-bottom:8px;}
+
+/* EXPENSE / INCOME ROWS */
+.er{background:var(--s2);border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;}
+.er-top{display:flex;gap:6px;margin-bottom:7px;align-items:center;}
+.er-top input{flex:1;background:var(--s3);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 6px;border-radius:3px;outline:none;}
+.er-top input:focus{border-color:var(--blue);}
+.er-grid{display:grid;gap:5px;}
+.er-grid label{display:block;font-size:9px;color:var(--muted);margin-bottom:3px;}
+.er-grid input{width:100%;background:var(--s3);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 5px;border-radius:3px;outline:none;}
+.er-grid input:focus{border-color:var(--blue);}
+.del-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px 5px;border-radius:3px;flex-shrink:0;}
+.del-btn:hover{color:var(--red);}
+.add-btn{width:100%;padding:6px;background:transparent;border:1px dashed var(--border2);border-radius:4px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;margin-top:3px;}
+.add-btn:hover{border-color:var(--blue);color:var(--blue);}
+
+
+/* KPI ROW */
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:9px;}
+.kpi{background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:10px 12px;}
+.kpi-lbl{font-size:9px;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px;}
+.kpi-val{font-size:13px;font-weight:500;}
+.kpi-val.g{color:var(--green);}
+.kpi-val.o{color:var(--orange);}
+
+/* SCENARIO CARDS */
+.res-row{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;}
+.rc{background:var(--s1);border:1px solid var(--border);border-radius:7px;padding:13px 15px;position:relative;overflow:hidden;cursor:pointer;transition:opacity .2s;}
+.rc::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;}
+.rc.g::after{background:var(--green);}
+.rc.b::after{background:var(--blue);}
+.rc.r::after{background:var(--red);}
+.rc.dimmed{opacity:.3;}
+.rc-lbl{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+.rc-rate{font-size:10px;color:var(--muted);float:right;margin-top:-16px;}
+.rc-age{font-family:'Syne',sans-serif;font-size:20px;font-weight:600;line-height:1;margin-bottom:4px;}
+.rc.g .rc-age{color:var(--green);}
+.rc.b .rc-age{color:var(--blue);}
+.rc.r .rc-age{color:var(--red);}
+.rc-sub{font-size:10px;color:var(--muted);line-height:1.5;margin-bottom:5px;}
+.badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:9px;border:1px solid;}
+.badge.done{background:var(--gd);border-color:#3ecf8e40;color:var(--green);}
+.badge.near{background:var(--od);border-color:#f0b42940;color:var(--gold);}
+.badge.no{background:var(--rd);border-color:#f05c5c40;color:var(--red);}
+
+/* CHART CONTROLS */
+.chart-controls{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.chart-tabs{display:flex;border:1px solid var(--border);border-radius:5px;overflow:hidden;}
+.ct{padding:6px 14px;font-size:10px;background:transparent;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;cursor:pointer;transition:all .15s;}
+.ct.active{background:var(--s2);color:var(--text);}
+.toggle-area{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+.toggle-hint{font-size:9px;color:var(--muted);}
+.scenario-toggles{display:flex;gap:6px;}
+.stog{display:flex;align-items:center;gap:5px;padding:4px 11px;border-radius:4px;font-size:10px;font-weight:500;border:1px solid;cursor:pointer;transition:opacity .2s;user-select:none;}
+.stog.green{border-color:#3ecf8e50;color:var(--green);background:var(--gd);}
+.stog.blue{border-color:#4db8f050;color:var(--blue);background:var(--bd);}
+.stog.red{border-color:#f05c5c50;color:var(--red);background:var(--rd);}
+.stog.dim{opacity:.3;}
+.stog-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+
+/* CHARTS */
+.chart-wrap{background:var(--s1);border:1px solid var(--border);border-radius:7px;padding:15px 18px;}
+.cpanel{display:none;}
+.cpanel.active{display:block;}
+.chart-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:11px;}
+.chart-title-txt{font-family:'Syne',sans-serif;font-size:13px;font-weight:600;}
+.chart-sub-txt{font-size:9px;color:var(--muted);margin-top:3px;line-height:1.8;}
+.legend-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.li{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);}
+.ll{width:14px;height:2px;border-radius:1px;}
+
+/* SPENDING PHASES */
+.spend-wrap{background:var(--s1);border:1px solid var(--border);border-radius:7px;padding:14px 17px;}
+.spend-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.spend-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:600;}
+.phase-mode-toggle{display:flex;align-items:center;gap:7px;font-size:9px;color:var(--muted);}
+.sw{width:30px;height:16px;background:var(--border2);border-radius:8px;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;}
+.sw.on{background:var(--blue);}
+.sw-knob{width:12px;height:12px;background:var(--text);border-radius:50%;position:absolute;top:2px;left:2px;transition:left .2s;}
+.sw.on .sw-knob{left:16px;}
+.spend-note{font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.5;}
+.phase-grid{display:grid;gap:9px;}
+.pb{background:var(--s2);border:1px solid var(--border);border-radius:5px;padding:11px;}
+.ph-lbl{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;}
+.ph-ages{font-family:'Syne',sans-serif;font-size:13px;font-weight:600;margin-bottom:7px;}
+.ph-row{display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px solid var(--border);}
+.ph-row:last-child{border:none;font-weight:500;padding-top:6px;}
+.ph-row .pk{color:var(--muted);}
+
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+.chart-canvas-wrap{position:relative;height:380px;}
+
+/* ── MOBILE ──────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  body{overflow:auto;height:auto;}
+
+  .topbar{flex-wrap:wrap;gap:8px;padding:10px 14px;}
+  .topbar h1{font-size:15px;}
+  .chips{margin-left:0;width:100%;order:3;}
+  .export-btn{order:2;}
+
+  .layout{
+    display:flex;
+    flex-direction:column;
+    overflow:visible;
+    height:auto;
+  }
+
+  .sidebar{
+    width:100%;
+    border-right:none;
+    border-bottom:1px solid var(--border);
+    overflow-y:visible;
+    padding-bottom:0;
+  }
+
+  /* Collapse all sidebar sections by default on mobile, user opens what they need */
+  .sb-body{display:none;}
+  .sb-body.open{display:block;}
+
+  .main{
+    overflow-y:visible;
+    padding:12px 14px 40px;
+  }
+
+  .kpi-row{grid-template-columns:repeat(3,1fr);gap:7px;}
+  .kpi{padding:9px 10px;}
+  .kpi-val{font-size:12px;}
+
+  .res-row{grid-template-columns:repeat(3,1fr);gap:7px;}
+  .rc{padding:10px 11px;}
+  .rc-age{font-size:16px;}
+  .rc-sub{font-size:9px;}
+
+  .chart-controls{flex-wrap:wrap;gap:7px;}
+  .toggle-area{margin-left:0;width:100%;flex-direction:row;align-items:center;gap:8px;}
+  .toggle-hint{margin-left:auto;}
+
+  /* Charts: full width on mobile */
+  #cp-accum .chart-wrap,
+  #cp-decum .chart-wrap{padding:12px 10px;}
+  .chart-canvas-wrap{height:300px;}
+
+  .chart-hdr{flex-direction:column;gap:8px;}
+  .chart-title-txt{font-size:12px;}
+  .chart-sub-txt{font-size:9px;}
+  .legend-row{gap:8px;}
+
+  /* Spending phases: 2 cols on mobile instead of 4 */
+  .phase-grid{grid-template-columns:repeat(2,1fr)!important;}
+  .pb{padding:9px;}
+  .ph-ages{font-size:12px;}
+  .ph-row{font-size:9px;}
+
+  .spend-hdr{flex-wrap:wrap;gap:6px;}
+
+  /* Fields layout */
+  .g2,.g3{grid-template-columns:1fr 1fr;gap:5px;}
+  .field input{font-size:12px;padding:5px 7px;}
+}
+
+@media (max-width: 480px) {
+  .kpi-row{grid-template-columns:repeat(2,1fr);}
+  .res-row{grid-template-columns:1fr;}
+  .phase-grid{grid-template-columns:1fr!important;}
+  .g2,.g3{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div>
+    <h1>Retirement Planner</h1>
+    <div class="tagline">Understand your retirement trajectory · Model spending · Explore CoastFIRE</div>
+  </div>
+  <div class="chips" id="chips"></div>
+  <button class="export-btn" onclick="doExport()">⬇ Export CSV</button>
+</div>
+
+<div class="layout">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+
+  <!-- PROFILE -->
+  <div class="sb-section">
+    <div class="sb-hdr open" onclick="tog(this)">Profile <span class="arr">▶</span></div>
+    <div class="sb-body open">
+      <div class="g3">
+        <div class="field"><label>Current Age</label><input id="curAge" value="35"></div>
+        <div class="field"><label>Retire Age</label><input id="retAge" value="65"></div>
+        <div class="field"><label>Plan To</label><input id="dieAge" value="90"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PORTFOLIO -->
+  <div class="sb-section">
+    <div class="sb-hdr open" onclick="tog(this)">Portfolio Today <span class="arr">▶</span></div>
+    <div class="sb-body open">
+      <div class="g2">
+        <div class="field"><label>401k / Pre-tax</label><input id="p401k" value="45,000"></div>
+        <div class="field"><label>Roth IRA</label><input id="pRoth" value="12,000"></div>
+        <div class="field"><label>Taxable Stocks</label><input id="pCash" value="10,000"></div>
+        <div class="field"><label>HSA</label><input id="pHSA" value="3,500"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTRIBUTIONS -->
+  <div class="sb-section">
+    <div class="sb-hdr open" onclick="tog(this)">Annual Contributions <span class="arr">▶</span></div>
+    <div class="sb-body open">
+      <div class="g2">
+        <div class="field"><label>401k ($/yr)</label><input id="c401k" value="6,500"></div>
+        <div class="field"><label>Brokerage ($/yr)</label><input id="cBrok" value="2,400"></div>
+        <div class="field"><label>Roth IRA ($/yr)</label><input id="cRoth" value="0"></div>
+        <div class="field"><label>HSA ($/yr)</label><input id="cHSA" value="1,600"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ASSUMPTIONS -->
+  <div class="sb-section">
+    <div class="sb-hdr open" onclick="tog(this)">Assumptions <span class="arr">▶</span></div>
+    <div class="sb-body open">
+      <div class="field">
+        <label>Return Rates — Low / Med / High (%)</label>
+        <div class="g3">
+          <input id="rLow" value="4" data-pct="1">
+          <input id="rMed" value="7" data-pct="1">
+          <input id="rHigh" value="10" data-pct="1">
+        </div>
+      </div>
+      <div class="field"><label>Safe Withdrawal Rate (%)</label><input id="swr" value="4" data-pct="1"></div>
+      <div class="field"><label>Effective Tax Rate in Retirement (%)</label><input id="taxRate" value="18" data-pct="1"></div>
+      <div class="sb-note">Tax rate grosses up your spending target to cover withdrawals. 401k = ordinary income; Roth = tax-free; brokerage = capital gains. ~18% is a reasonable blended starting point.</div>
+    </div>
+  </div>
+
+  <!-- INCOME SOURCES -->
+  <div class="sb-section">
+    <div class="sb-hdr open" onclick="tog(this)">Income in Retirement <span class="arr">▶</span></div>
+    <div class="sb-body open">
+      <div class="sb-note">Social Security, pension, rental income, etc. Reduces portfolio withdrawals from start age onward. Inflates at 3%/yr. Get your SS estimate at <span style="color:var(--blue)">ssa.gov</span>.</div>
+      <div id="incomeList"></div>
+      <button class="add-btn" onclick="addIncome()">+ Add Income Source</button>
+    </div>
+  </div>
+
+  <!-- EXPENSES -->
+  <div class="sb-section">
+    <div class="sb-hdr open" onclick="tog(this)">Monthly Expenses <span class="arr">▶</span></div>
+    <div class="sb-body open">
+      <div class="sb-note">Monthly amount · Inflation %/yr · End age (blank = never ends)</div>
+      <div id="expList"></div>
+      <button class="add-btn" onclick="addExp()">+ Add Expense</button>
+    </div>
+  </div>
+
+</div><!-- /sidebar -->
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-lbl">Total Portfolio</div><div class="kpi-val" id="kPort">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">Monthly Spend</div><div class="kpi-val o" id="kMo">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">Annual Spend</div><div class="kpi-val o" id="kAnn">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">Retirement Target</div><div class="kpi-val" id="kFI">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">Annual Gross Withdrawal</div><div class="kpi-val o" id="kGross">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">Contributions / yr</div><div class="kpi-val g" id="kCon">—</div></div>
+  </div>
+
+  <!-- SCENARIO CARDS -->
+  <div class="res-row">
+    <div class="rc g" id="card-high" onclick="toggleScenario('high')">
+      <div class="rc-lbl">Optimistic</div><div class="rc-rate" id="lblH">10%</div>
+      <div class="rc-age" id="ageH">—</div><div class="rc-sub" id="subH">—</div><div id="bdgH"></div>
+    </div>
+    <div class="rc b" id="card-med" onclick="toggleScenario('med')">
+      <div class="rc-lbl">Base Case</div><div class="rc-rate" id="lblM">7%</div>
+      <div class="rc-age" id="ageM">—</div><div class="rc-sub" id="subM">—</div><div id="bdgM"></div>
+    </div>
+    <div class="rc r" id="card-low" onclick="toggleScenario('low')">
+      <div class="rc-lbl">Conservative</div><div class="rc-rate" id="lblL">4%</div>
+      <div class="rc-age" id="ageL">—</div><div class="rc-sub" id="subL">—</div><div id="bdgL"></div>
+    </div>
+  </div>
+
+  <!-- CHART CONTROLS -->
+  <div class="chart-controls">
+    <div class="chart-tabs">
+      <button class="ct active" onclick="showChart('accum',this)">Accumulation</button>
+      <button class="ct" onclick="showChart('decum',this)">Retirement</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+      <span style="font-size:9px;color:var(--muted);white-space:nowrap;">Toggle scenarios:</span>
+      <div class="scenario-toggles">
+        <div class="stog green" id="tog-high" onclick="toggleScenario('high')"><span class="stog-dot"></span>Optimistic</div>
+        <div class="stog blue"  id="tog-med"  onclick="toggleScenario('med')"><span class="stog-dot"></span>Base</div>
+        <div class="stog red"   id="tog-low"  onclick="toggleScenario('low')"><span class="stog-dot"></span>Conservative</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACCUM CHART -->
+  <div id="cp-accum" class="cpanel active">
+    <div class="chart-wrap">
+      <div class="chart-hdr">
+        <div>
+          <div class="chart-title-txt">Portfolio vs CoastFIRE Thresholds</div>
+          <div class="chart-sub-txt">
+            <div>— Solid line: your portfolio if you keep contributing until retirement</div>
+            <div>- - Dashed line: coast threshold — amount needed to stop contributing &amp; still retire on time</div>
+            <div>— Gold line: your FI number (target portfolio size at retirement)</div>
+          </div>
+        </div>
+        <div class="legend-row">
+          <div class="li"><div class="ll" style="background:#3ecf8e"></div>High</div>
+          <div class="li"><div class="ll" style="background:#4db8f0"></div>Med</div>
+          <div class="li"><div class="ll" style="background:#f05c5c"></div>Low</div>
+          <div class="li"><div class="ll" style="background:#f0b429;opacity:.8"></div>FI #</div>
+        </div>
+      </div>
+      <div class="chart-canvas-wrap"><canvas id="accumChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- DECUM CHART -->
+  <div id="cp-decum" class="cpanel">
+    <div class="chart-wrap">
+      <div class="chart-hdr">
+        <div>
+          <div class="chart-title-txt">Portfolio Balance in Retirement</div>
+          <div class="chart-sub-txt">Vertical lines show when income starts or spending drops</div>
+        </div>
+        <div class="legend-row">
+          <div class="li"><div class="ll" style="background:#3ecf8e"></div>High</div>
+          <div class="li"><div class="ll" style="background:#4db8f0"></div>Med</div>
+          <div class="li"><div class="ll" style="background:#f05c5c"></div>Low</div>
+        </div>
+      </div>
+      <div class="chart-canvas-wrap"><canvas id="decumChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- SPENDING PHASES -->
+  <div class="spend-wrap">
+    <div class="spend-hdr">
+      <div class="spend-title">Spending by Phase</div>
+      <div class="phase-mode-toggle">
+        <span>Today's $</span>
+        <div class="sw" id="phaseSwitch" onclick="togglePhaseMode()"><div class="sw-knob"></div></div>
+        <span>Nominal $</span>
+      </div>
+    </div>
+    <div class="spend-note" id="phaseNote">Showing today's dollars — what each expense feels like now. Toggle to see future nominal amounts.</div>
+    <div class="phase-grid" id="phaseGrid"></div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /layout -->
+
+<script>
+// ── STATE ─────────────────────────────────────────────────────────
+const vis = {high:true, med:true, low:true};
+let phaseNominal = false;
+let currentFI = 0;
+let aC, dC;
+
+// ── DATA ──────────────────────────────────────────────────────────
+let incomes = [
+  {id:1, name:'Social Security', mo:2000, startAge:67},
+];
+let incNid = 2;
+
+let exps = [
+  {id:1,  name:'Rent or Mortgage P&I + Insurance', mo:1800, infl:0,   end:65  },
+  {id:2,  name:'Property Tax',                     mo:300,  infl:2,   end:null},
+  {id:3,  name:'Home Insurance',                   mo:150,  infl:3,   end:null},
+  {id:4,  name:'Home Maintenance',                 mo:100,  infl:3,   end:null},
+  {id:5,  name:'Electric/Water/Gas',               mo:200,  infl:3,   end:null},
+  {id:6,  name:'Internet/Phone',                   mo:150,  infl:2,   end:null},
+  {id:7,  name:'Car Payment',                      mo:400,  infl:0,   end:68  },
+  {id:8,  name:'Car Ins+Fuel+Maint',               mo:300,  infl:3,   end:null},
+  {id:9,  name:'Groceries',                        mo:600,  infl:3,   end:null},
+  {id:10, name:'Dining Out',                       mo:300,  infl:3,   end:null},
+  {id:11, name:'Health Insurance (pre-Medicare)',  mo:500,  infl:5.5, end:65  },
+  {id:14, name:'Medicare + Supplement (65+)',      mo:350,  infl:4,   end:null},
+  {id:12, name:'Lifestyle+Entertainment',          mo:200,  infl:3,   end:null},
+  {id:13, name:'Travel',                           mo:200,  infl:3,   end:null},
+];
+let expNid = 15;
+
+// ── FORMAT ────────────────────────────────────────────────────────
+function fmt(v) {
+  if (v >= 1e6) return '$' + (v/1e6).toFixed(2).replace(/\.?0+$/,'') + 'M';
+  if (v >= 1e3) return '$' + Math.round(v/1000) + 'K';
+  return '$' + Math.round(v);
+}
+function fmtTip(v) {
+  if (v >= 1e6) return '$' + (v/1e6).toFixed(3) + 'M';
+  if (v >= 1e3) return '$' + (v/1000).toFixed(1) + 'K';
+  return '$' + Math.round(v);
+}
+function addCommas(n) {
+  if (isNaN(+n)) return n;
+  return (+n).toLocaleString('en-US', {maximumFractionDigits:2});
+}
+function stripCommas(s) { return String(s).replace(/,/g,''); }
+function rawN(id) { return parseFloat(stripCommas(document.getElementById(id).value)) || 0; }
+function rateStr(r) { return +parseFloat((r*100).toPrecision(6)) + '%'; }
+
+// ── COMMA INPUT WIRING ────────────────────────────────────────────
+function wireComma(el) {
+  if (el.dataset.pct) {
+    el.addEventListener('input', recalc);
+    return;
+  }
+  el.addEventListener('focus', function() { this.value = stripCommas(this.value); });
+  el.addEventListener('blur',  function() {
+    const n = parseFloat(this.value);
+    if (!isNaN(n)) this.value = addCommas(n);
+    recalc();
+  });
+  el.addEventListener('input', recalc);
+}
+
+// ── RENDER INCOME SOURCES ─────────────────────────────────────────
+function renderIncomes() {
+  const el = document.getElementById('incomeList');
+  el.innerHTML = '';
+  incomes.forEach(inc => {
+    const d = document.createElement('div');
+    d.className = 'er';
+    d.innerHTML = `
+      <div class="er-top">
+        <input value="${inc.name}" data-inc="${inc.id}" data-ikey="name">
+        <button class="del-btn" data-delinc="${inc.id}">✕</button>
+      </div>
+      <div class="er-grid" style="grid-template-columns:1fr 1fr;">
+        <div>
+          <label>$/mo (today's $)</label>
+          <input value="${addCommas(inc.mo)}" data-inc="${inc.id}" data-ikey="mo" data-comma="1">
+        </div>
+        <div>
+          <label>Start age</label>
+          <input type="number" value="${inc.startAge}" data-inc="${inc.id}" data-ikey="startAge">
+        </div>
+      </div>`;
+    el.appendChild(d);
+  });
+  wireCommaFields(el);
+}
+
+function addIncome() {
+  incomes.push({id:incNid++, name:'New Income Source', mo:1000, startAge:67});
+  renderIncomes(); recalc();
+}
+
+// ── RENDER EXPENSES ───────────────────────────────────────────────
+function renderExps() {
+  const el = document.getElementById('expList');
+  el.innerHTML = '';
+  exps.forEach(e => {
+    const d = document.createElement('div');
+    d.className = 'er';
+    d.innerHTML = `
+      <div class="er-top">
+        <input value="${e.name}" data-exp="${e.id}" data-ekey="name">
+        <button class="del-btn" data-delexp="${e.id}">✕</button>
+      </div>
+      <div class="er-grid" style="grid-template-columns:1fr 1fr 1fr;">
+        <div>
+          <label>$/mo</label>
+          <input value="${addCommas(e.mo)}" data-exp="${e.id}" data-ekey="mo" data-comma="1">
+        </div>
+        <div>
+          <label>Inflation %</label>
+          <input type="number" value="${e.infl}" step="0.5" data-exp="${e.id}" data-ekey="infl">
+        </div>
+        <div>
+          <label>End age</label>
+          <input type="number" value="${e.end ?? ''}" placeholder="never" data-exp="${e.id}" data-ekey="end">
+        </div>
+      </div>
+`;
+    el.appendChild(d);
+  });
+  wireCommaFields(el);
+}
+
+function addExp() {
+  exps.push({id:expNid++, name:'New Expense', mo:100, infl:3, end:null});
+  renderExps(); recalc();
+}
+
+function wireCommaFields(container) {
+  container.querySelectorAll('input[data-comma]').forEach(inp => {
+    inp.addEventListener('focus', function() { this.value = stripCommas(this.value); });
+    inp.addEventListener('blur',  function() {
+      const n = parseFloat(this.value);
+      if (!isNaN(n)) this.value = addCommas(n);
+    });
+  });
+}
+
+// ── EVENT DELEGATION ──────────────────────────────────────────────
+document.addEventListener('input', ev => {
+  const t = ev.target;
+
+  // Expense fields
+  if (t.dataset.exp && t.dataset.ekey) {
+    const e = exps.find(x => x.id === +t.dataset.exp);
+    if (e) {
+      if      (t.dataset.ekey === 'name') e.name = t.value;
+      else if (t.dataset.ekey === 'end')  e.end  = t.value === '' ? null : +t.value;
+      else    e[t.dataset.ekey] = parseFloat(stripCommas(t.value)) || 0;
+    }
+  }
+
+  // Income fields
+  if (t.dataset.inc && t.dataset.ikey) {
+    const inc = incomes.find(x => x.id === +t.dataset.inc);
+    if (inc) {
+      if (t.dataset.ikey === 'name') inc.name = t.value;
+      else inc[t.dataset.ikey] = parseFloat(stripCommas(t.value)) || 0;
+    }
+  }
+
+  recalc();
+});
+
+document.addEventListener('click', ev => {
+  if (ev.target.dataset.delexp) {
+    exps = exps.filter(x => x.id !== +ev.target.dataset.delexp);
+    renderExps(); recalc();
+  }
+  if (ev.target.dataset.delinc) {
+    incomes = incomes.filter(x => x.id !== +ev.target.dataset.delinc);
+    renderIncomes(); recalc();
+  }
+});
+
+// ── MATH ──────────────────────────────────────────────────────────
+function getInp() {
+  return {
+    curAge: rawN('curAge'), retAge: rawN('retAge'), dieAge: rawN('dieAge'),
+    p401k:  rawN('p401k'),  pRoth:  rawN('pRoth'),  pCash:  rawN('pCash'),  pHSA:  rawN('pHSA'),
+    c401k:  rawN('c401k'),  cBrok:  rawN('cBrok'),  cRoth:  rawN('cRoth'),  cHSA:  rawN('cHSA'),
+    rLow:   rawN('rLow')/100, rMed: rawN('rMed')/100, rHigh: rawN('rHigh')/100,
+    swr:    rawN('swr')/100,
+    tax:    rawN('taxRate')/100,
+  };
+}
+
+// Nominal annual spend at a given age (each expense inflated individually)
+function spendAt(age, i) {
+  const yrs = age - i.curAge;
+  return exps.reduce((s, e) => {
+    if (e.end !== null && age >= e.end) return s;
+    return s + e.mo * 12 * Math.pow(1 + e.infl/100, yrs);
+  }, 0);
+}
+
+// Nominal income at a given age (inflated at 3%/yr from today)
+function incomeAt(age, i) {
+  const yrs = age - i.curAge;
+  return incomes.reduce((s, inc) => {
+    if (age < inc.startAge) return s;
+    return s + inc.mo * 12 * Math.pow(1.03, yrs);
+  }, 0);
+}
+
+// FI number: gross up spend for taxes, subtract income that starts at/before retirement
+function getFI(i) {
+  const afterTax = spendAt(i.retAge, i);
+  const grossed  = afterTax / (1 - i.tax);
+  const incAtRetire = incomes
+    .filter(inc => inc.startAge <= i.retAge)
+    .reduce((s, inc) => {
+      return s + inc.mo * 12 * Math.pow(1.03, i.retAge - i.curAge);
+    }, 0);
+  return Math.max(0, grossed - incAtRetire) / i.swr;
+}
+
+function portAt(age, i, r) {
+  const yrs   = age - i.curAge;
+  const start = i.p401k + i.pRoth + i.pCash + i.pHSA;
+  const con   = i.c401k + i.cBrok + i.cRoth + i.cHSA;
+  if (yrs <= 0) return start;
+  return start * Math.pow(1+r, yrs) + con * (Math.pow(1+r,yrs)-1)/r;
+}
+
+function coastT(age, i, r, FI) {
+  const yrs = i.retAge - age;
+  return yrs <= 0 ? FI : FI / Math.pow(1+r, yrs);
+}
+
+function findCoast(i, r, FI) {
+  for (let a = i.curAge; a <= i.retAge; a++)
+    if (portAt(a,i,r) >= coastT(a,i,r,FI)) return a;
+  return null;
+}
+
+function decum(startBal, i, r) {
+  const ages=[], bals=[];
+  let bal = startBal;
+  for (let age = i.retAge; age <= i.dieAge; age++) {
+    ages.push(age);
+    bals.push(Math.max(0, Math.round(bal)));
+    if (bal <= 0) { for(let a=age+1;a<=i.dieAge;a++){ages.push(a);bals.push(0);} break; }
+    const netDraw = Math.max(0, spendAt(age,i) - incomeAt(age,i));
+    bal = bal*(1+r) - netDraw;
+  }
+  return {ages, bals};
+}
+
+// ── SCENARIO TOGGLE ───────────────────────────────────────────────
+function toggleScenario(key) {
+  vis[key] = !vis[key];
+  document.getElementById('card-'+key).classList.toggle('dimmed', !vis[key]);
+  document.getElementById('tog-'+key).classList.toggle('dim',    !vis[key]);
+  // accum datasets: 0=H,1=M,2=L,3=cH,4=cM,5=cL
+  // decum datasets: 0=H,1=M,2=L
+  const aMap = {high:[0,3], med:[1,4], low:[2,5]};
+  const dMap = {high:[0],   med:[1],   low:[2]};
+  if (aC) { aMap[key].forEach(j => aC.data.datasets[j].hidden = !vis[key]); aC.update('none'); }
+  if (dC) { dMap[key].forEach(j => dC.data.datasets[j].hidden = !vis[key]); dC.update('none'); }
+}
+
+// ── PHASE MODE ────────────────────────────────────────────────────
+function togglePhaseMode() {
+  phaseNominal = !phaseNominal;
+  document.getElementById('phaseSwitch').classList.toggle('on', phaseNominal);
+  document.getElementById('phaseNote').textContent = phaseNominal
+    ? "Showing nominal future dollars — actual amounts you'll be withdrawing (inflation-adjusted upward)."
+    : "Showing today's dollars — what each expense feels like in current purchasing power.";
+  const i = getInp();
+  if (i.curAge && i.retAge) renderPhases(i);
+}
+
+// ── CHARTS ───────────────────────────────────────────────────────
+const SX = {
+  grid:{color:'#1e2a3828'},
+  ticks:{color:'#5a6e83',font:{family:'JetBrains Mono',size:10}},
+  title:{display:true,text:'Age',color:'#5a6e83',font:{family:'JetBrains Mono',size:10}}
+};
+const SY = {
+  grid:{color:'#1e2a3828'},
+  ticks:{color:'#5a6e83',font:{family:'JetBrains Mono',size:10}, callback:v=>fmt(v)},
+  title:{display:true,text:'Portfolio',color:'#5a6e83',font:{family:'JetBrains Mono',size:10}}
+};
+const TIP = cb => ({
+  backgroundColor:'#141a22',borderColor:'#1e2a38',borderWidth:1,
+  titleColor:'#5a6e83',bodyColor:'#dde5ef',padding:10,
+  callbacks:{title:c=>`Age ${c[0].label}`, label:cb}
+});
+function mkDs(label, color, dash) {
+  return {label,data:[],borderColor:color,backgroundColor:'transparent',
+    borderWidth:dash?1.5:2.5,borderDash:dash?[5,4]:undefined,
+    pointRadius:0,pointHoverRadius:4,tension:0.3};
+}
+
+// FI horizontal line plugin
+const fiPlugin = {
+  id:'fi',
+  afterDraw(chart) {
+    if (!currentFI) return;
+    const {ctx,chartArea:{left,right,top,bottom},scales:{y}} = chart;
+    const yp = y.getPixelForValue(currentFI);
+    if (yp < top || yp > bottom) return;
+    ctx.save();
+    ctx.strokeStyle='#f0b42990';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
+    ctx.beginPath();ctx.moveTo(left,yp);ctx.lineTo(right,yp);ctx.stroke();
+    ctx.fillStyle='#f0b429';ctx.font='9px JetBrains Mono';
+    ctx.fillText('FI # '+fmt(currentFI), left+4, yp-5);
+    ctx.restore();
+  }
+};
+
+// Vertical event lines plugin (decum)
+const eventPlugin = {
+  id:'events',
+  afterDraw(chart) {
+    const {ctx,chartArea:{top,bottom},scales:{x}} = chart;
+    const labels = chart.data.labels;
+    const palette = ['#f0b429','#9b7fe8','#4db8f0','#3ecf8e'];
+    let idx = 0;
+
+    // Income start lines
+    incomes.forEach(inc => {
+      if (!labels.includes(inc.startAge)) return;
+      const xp = x.getPixelForValue(labels.indexOf(inc.startAge));
+      const col = '#3ecf8e';
+      ctx.save();
+      ctx.strokeStyle=col+'70';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(xp,top);ctx.lineTo(xp,bottom);ctx.stroke();
+      ctx.fillStyle=col;ctx.font='9px JetBrains Mono';
+      ctx.fillText(inc.name.split(' ')[0]+` starts (${inc.startAge})`, xp+3, top+11+idx*13);
+      ctx.restore();
+      idx++;
+    });
+
+    // Expense end lines
+    const seen = new Set();
+    exps.forEach(e => {
+      if (!e.end || !labels.includes(e.end) || seen.has(e.end)) return;
+      seen.add(e.end);
+      const xp = x.getPixelForValue(labels.indexOf(e.end));
+      const col = palette[seen.size % palette.length];
+      ctx.save();
+      ctx.strokeStyle=col+'60';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.moveTo(xp,top);ctx.lineTo(xp,bottom);ctx.stroke();
+      ctx.fillStyle=col;ctx.font='9px JetBrains Mono';
+      ctx.fillText(e.name.split(' ')[0]+` ends (${e.end})`, xp+3, top+11+idx*13);
+      ctx.restore();
+      idx++;
+    });
+  }
+};
+
+function initCharts() {
+  aC = new Chart(document.getElementById('accumChart'), {
+    type:'line',
+    data:{labels:[], datasets:[
+      mkDs('High Portfolio','#3ecf8e'), mkDs('Med Portfolio','#4db8f0'), mkDs('Low Portfolio','#f05c5c'),
+      mkDs('Coast @High','#3ecf8e',true), mkDs('Coast @Med','#4db8f0',true), mkDs('Coast @Low','#f05c5c',true),
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:{duration:250},
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false}, tooltip:TIP(c=>` ${c.dataset.label}: ${fmtTip(c.raw)}`)},
+      scales:{x:SX, y:SY}
+    },
+    plugins:[fiPlugin]
+  });
+
+  dC = new Chart(document.getElementById('decumChart'), {
+    type:'line',
+    data:{labels:[], datasets:[
+      mkDs('High','#3ecf8e'), mkDs('Med','#4db8f0'), mkDs('Low','#f05c5c'),
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:{duration:250},
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false}, tooltip:TIP(c=>` ${c.dataset.label}: ${fmtTip(c.raw)}`)},
+      scales:{x:{...SX, ticks:{...SX.ticks, callback:(v,idx)=>{
+        const a=dC.data.labels[idx]; return (a!==undefined && a%5===0)?a:'';
+      }}}, y:SY}
+    },
+    plugins:[eventPlugin]
+  });
+}
+
+function updateCharts(i, FI) {
+  currentFI = FI;
+  const ages = Array.from({length:i.retAge-i.curAge+1}, (_,y)=>i.curAge+y);
+  const pH=ages.map(a=>portAt(a,i,i.rHigh));
+  const pM=ages.map(a=>portAt(a,i,i.rMed));
+  const pL=ages.map(a=>portAt(a,i,i.rLow));
+
+  aC.data.labels = ages;
+  const keys = ['high','med','low','high','med','low'];
+  [pH,pM,pL,
+   ages.map(a=>coastT(a,i,i.rHigh,FI)),
+   ages.map(a=>coastT(a,i,i.rMed, FI)),
+   ages.map(a=>coastT(a,i,i.rLow, FI))
+  ].forEach((d,j) => {
+    aC.data.datasets[j].data   = d;
+    aC.data.datasets[j].hidden = !vis[keys[j]];
+  });
+  aC.update('none');
+
+  const dH=decum(pH[pH.length-1],i,i.rHigh);
+  const dM=decum(pM[pM.length-1],i,i.rMed);
+  const dL=decum(pL[pL.length-1],i,i.rLow);
+  dC.data.labels = dM.ages;
+  [[dH,'high'],[dM,'med'],[dL,'low']].forEach(([d,k],j)=>{
+    dC.data.datasets[j].data   = d.bals;
+    dC.data.datasets[j].hidden = !vis[k];
+  });
+  dC.update('none');
+}
+
+// ── SPENDING PHASES ───────────────────────────────────────────────
+function renderPhases(i) {
+  const bps = [i.retAge];
+  exps.forEach(e => {
+    if (e.end && e.end > i.retAge && e.end < i.dieAge && !bps.includes(e.end))
+      bps.push(e.end);
+  });
+  bps.push(i.dieAge);
+  bps.sort((a,b)=>a-b);
+
+  const grid = document.getElementById('phaseGrid');
+  const n = Math.min(bps.length-1, 4);
+  grid.style.gridTemplateColumns = `repeat(${n},1fr)`;
+  grid.innerHTML = '';
+
+  for (let p=0; p<n; p++) {
+    const sa=bps[p], ea=bps[p+1];
+    const yrs = sa - i.curAge;
+    let total=0, rows='';
+
+    exps.filter(e => !(e.end !== null && sa >= e.end)).forEach(e => {
+      const nom = e.mo * 12 * Math.pow(1 + e.infl/100, yrs);
+      total += nom;
+      const display = phaseNominal ? nom/12 : e.mo;
+      rows += `<div class="ph-row"><span class="pk">${e.name.slice(0,24)}</span><span>$${Math.round(display).toLocaleString()}/mo</span></div>`;
+    });
+
+    const d = document.createElement('div');
+    d.className = 'pb';
+    d.innerHTML = `<div class="ph-lbl">Phase ${p+1}</div><div class="ph-ages">Age ${sa}–${ea}</div>${rows}
+      <div class="ph-row"><span class="pk">Annual ${phaseNominal?'nominal':'today\'s $'}</span><span style="color:var(--gold)">${fmt(phaseNominal?total:exps.filter(e=>!(e.end!==null&&sa>=e.end)).reduce((s,e)=>s+e.mo*12,0))}</span></div>`;
+    grid.appendChild(d);
+  }
+}
+
+// ── RECALC ────────────────────────────────────────────────────────
+function recalc() {
+  const i = getInp();
+  if (!i.curAge || !i.retAge || i.retAge <= i.curAge) return;
+
+  const port    = i.p401k+i.pRoth+i.pCash+i.pHSA;
+  const contrib = i.c401k+i.cBrok+i.cRoth+i.cHSA;
+  const moSpend = exps.reduce((s,e)=>s+e.mo,0);
+  const FI      = getFI(i);
+  const grossWd = spendAt(i.retAge, i) / (1 - i.tax);
+
+  document.getElementById('kPort').textContent  = fmt(port);
+  document.getElementById('kMo').textContent    = '$'+Math.round(moSpend).toLocaleString();
+  document.getElementById('kAnn').textContent   = fmt(moSpend*12);
+  document.getElementById('kFI').textContent    = fmt(FI);
+  document.getElementById('kGross').textContent = fmt(grossWd)+'/yr';
+  document.getElementById('kCon').textContent   = '$'+contrib.toLocaleString()+'/yr';
+
+  document.getElementById('lblH').textContent = rateStr(i.rHigh);
+  document.getElementById('lblM').textContent = rateStr(i.rMed);
+  document.getElementById('lblL').textContent = rateStr(i.rLow);
+
+  const scenarios = [{key:'high',r:i.rHigh,id:'H'},{key:'med',r:i.rMed,id:'M'},{key:'low',r:i.rLow,id:'L'}];
+  const chipHtml = [];
+
+  scenarios.forEach(({key,r,id}) => {
+    const ca  = findCoast(i,r,FI);
+    const pr  = portAt(i.retAge,i,r);
+    const pct = (pr/FI*100).toFixed(0);
+    document.getElementById('sub'+id).textContent = `${fmt(pr)} @ ${i.retAge} · ${pct}% funded`;
+    if (ca !== null && ca <= i.curAge) {
+      document.getElementById('age'+id).textContent = 'Now ✓';
+      document.getElementById('bdg'+id).innerHTML  = '<span class="badge done">CoastFIRE Achieved</span>';
+      chipHtml.push(`<div class="chip achieved"><span class="chip-dot"></span>${rateStr(r)} — Coast Achieved</div>`);
+    } else if (ca !== null) {
+      document.getElementById('age'+id).textContent = `Age ${ca}`;
+      document.getElementById('bdg'+id).innerHTML  = `<span class="badge near">${ca-i.curAge} yrs from coasting</span>`;
+      chipHtml.push(`<div class="chip near"><span class="chip-dot"></span>${rateStr(r)} — Coast Age ${ca}</div>`);
+    } else {
+      document.getElementById('age'+id).textContent = `Not by ${i.retAge}`;
+      document.getElementById('bdg'+id).innerHTML  = `<span class="badge no">Extend retire age or save more</span>`;
+      chipHtml.push(`<div class="chip no"><span class="chip-dot"></span>${rateStr(r)} — Not yet reachable</div>`);
+    }
+  });
+
+  document.getElementById('chips').innerHTML = chipHtml.join('');
+  updateCharts(i, FI);
+  renderPhases(i);
+}
+
+// ── EXPORT CSV ────────────────────────────────────────────────────
+function doExport() {
+  const i = getInp();
+  const FI = getFI(i);
+  const rows = [];
+
+  rows.push(['CoastFIRE Planner Export']);
+  rows.push([]);
+  rows.push(['PROFILE']);
+  rows.push(['Current Age', i.curAge],['Retire Age', i.retAge],['Plan To Age', i.dieAge]);
+  rows.push([]);
+  rows.push(['ASSUMPTIONS']);
+  rows.push(['Return Low %', rawN('rLow')],['Return Med %', rawN('rMed')],['Return High %', rawN('rHigh')]);
+  rows.push(['SWR %', rawN('swr')],['Tax Rate %', rawN('taxRate')]);
+  rows.push([]);
+  rows.push(['PORTFOLIO']);
+  rows.push(['401k', i.p401k],['Roth', i.pRoth],['Taxable', i.pCash],['HSA', i.pHSA]);
+  rows.push(['Total', i.p401k+i.pRoth+i.pCash+i.pHSA]);
+  rows.push([]);
+  rows.push(['CONTRIBUTIONS (annual)']);
+  rows.push(['401k', i.c401k],['Brokerage', i.cBrok],['Roth', i.cRoth],['HSA', i.cHSA]);
+  rows.push(['Total', i.c401k+i.cBrok+i.cRoth+i.cHSA]);
+  rows.push([]);
+  rows.push(['INCOME SOURCES', 'Monthly ($)', 'Start Age']);
+  incomes.forEach(inc => rows.push([inc.name, inc.mo, inc.startAge]));
+  rows.push([]);
+  rows.push(['MONTHLY EXPENSES', '$/mo', 'Inflation %', 'End Age']);
+  exps.forEach(e => rows.push([e.name, e.mo, e.infl, e.end ?? 'never']));
+  rows.push(['TOTAL MONTHLY', exps.reduce((s,e)=>s+e.mo,0)]);
+  rows.push([]);
+  rows.push(['COASTFIRE RESULTS']);
+  rows.push(['FI Number @ Retirement', Math.round(FI)]);
+  rows.push([]);
+  rows.push(['Scenario','Return %','Portfolio @ Retire','% Funded','CoastFIRE Age']);
+  [{label:'High',r:i.rHigh},{label:'Med',r:i.rMed},{label:'Low',r:i.rLow}].forEach(({label,r}) => {
+    const pr  = portAt(i.retAge,i,r);
+    const ca  = findCoast(i,r,FI);
+    rows.push([label,(r*100).toFixed(1),Math.round(pr),(pr/FI*100).toFixed(1)+'%',
+      ca!==null?(ca<=i.curAge?'Now':ca):'Not by '+i.retAge]);
+  });
+  rows.push([]);
+  rows.push(['YEAR-BY-YEAR (Med '+rawN('rMed')+'%)']);
+  rows.push(['Age','Portfolio ($)','Coast Threshold ($)','CoastFIRE?','Annual Spend ($)','Annual Income ($)']);
+  for (let age=i.curAge; age<=i.retAge; age++) {
+    const p=Math.round(portAt(age,i,i.rMed));
+    const t=Math.round(coastT(age,i,i.rMed,FI));
+    const sp=Math.round(spendAt(age,i));
+    const inc=Math.round(incomeAt(age,i));
+    rows.push([age,p,t,p>=t?'YES':'no',sp,inc]);
+  }
+
+  const csv = rows.map(r=>r.map(v=>{
+    const s=String(v??'');
+    return s.includes(',')?`"${s}"`:s;
+  }).join(',')).join('\n');
+
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href=url; a.download='coastfire-plan.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── CHART TAB SWITCH ──────────────────────────────────────────────
+function showChart(name, btn) {
+  document.querySelectorAll('.ct').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.cpanel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('cp-'+name).classList.add('active');
+  btn.classList.add('active');
+  requestAnimationFrame(()=>{ if(name==='accum') aC.resize(); else dC.resize(); });
+}
+
+// ── SIDEBAR TOGGLE ────────────────────────────────────────────────
+function tog(hdr) {
+  hdr.classList.toggle('open');
+  hdr.nextElementSibling.classList.toggle('open');
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────
+// Wire sidebar inputs with comma formatting
+document.querySelectorAll('.field input').forEach(wireComma);
+
+renderIncomes();
+renderExps();
+initCharts();
+recalc();
+</script>
+</body>
+</html>
